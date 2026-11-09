@@ -324,6 +324,7 @@ Attribution Attribute(const ThreadTicks& ticks, const std::array<bool, ThreadCou
     return result;
 }
 
+/// Called by the renderer for each presented frame, by one thread at a time.
 void OnPresent() {
     auto& state = g_frame;
     const u64 now = Nx2Profile::Now();
@@ -402,11 +403,12 @@ void OnPresent() {
         // Ticks and count are separate atomics: a run can land in one frame's ticks and the next
         // frame's count, so each adds up on its own.
         const u64 count = site_counts[index] - (std::min)(site_counts[index], last_site_counts[index]);
-        const u64 ticks = site_ticks[index] - (std::min)(site_ticks[index], last_site_ticks[index]);
-        if (count == 0 && ticks == 0) {
+        const u64 ticks_delta =
+            site_ticks[index] - (std::min)(site_ticks[index], last_site_ticks[index]);
+        if (count == 0 && ticks_delta == 0) {
             continue;
         }
-        const double ms = static_cast<double>(ticks) * ms_per_tick;
+        const double ms = static_cast<double>(ticks_delta) * ms_per_tick;
         state.window_site_counts[index] += count;
         state.window_site_ms[index] += ms;
         sites += fmt::format("{}{}:{}x{:.1f}", sites.empty() ? "" : ",", site_names[index], count, ms);
